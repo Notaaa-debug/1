@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>占星+塔罗占卜工具（带关键词）</title>
+    <style>
+        /* 原有样式不变 */
+        table {
+            border-collapse: collapse;
+            width: 80%;
+            margin: 30px auto;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+        }
+        td, th {
+            border: 1px solid #000;
+            padding: 12px;
+            text-align: center;
+        }
+        th {
+            background-color: #f0f0f0;
+        }
+        button {
+            padding: 8px 16px;
+            cursor: pointer;
+            border: 1px solid #000;
+            background-color: #fff;
+            margin: 0 5px;
+        }
+        button:hover {
+            background-color: #f0f0f0;
+        }
+        .result-item {
+            cursor: pointer;
+            text-decoration: underline;
+            color: #0066cc;
+        }
+        .keywords {
+            width: 80%;
+            margin: 10px auto;
+            padding: 10px;
+            border: 1px solid #000;
+            text-align: center;
+            display: none;
+        }
+
+        /* 塔罗牌区域样式优化 */
+        .tarot-section {
+            width: 80%;
+            margin: 50px auto;
+            text-align: center;
+            font-family: Arial, sans-serif;
+            font-size: 16px;
+        }
+        .tarot-controls {
+            margin-bottom: 20px;
+        }
+        .tarot-table {
+            width: 100%;
+            margin: 0 auto;
+        }
+        .tarot-card-cell {
+            text-align: left;
+            cursor: pointer;
+            padding: 15px;
+        }
+        .tarot-keywords-cell {
+            text-align: left;
+            padding: 15px;
+            display: none; /* 默认隐藏关键词列 */
+        }
+    </style>
+</head>
+<body>
+    <!-- 原有占星抽取表格 -->
+    <table>
+        <tr>
+            <th>功能</th>
+            <th>当前抽取结果</th>
+            <th>操作</th>
+        </tr>
+        <tr>
+            <td>随机星座</td>
+            <td id="zodiacResult" class="result-item" onclick="toggleKeywords('zodiacKeywords')">未抽取</td>
+            <td><button onclick="randomZodiac()">点击抽取</button></td>
+        </tr>
+        <tr>
+            <td>随机宫位</td>
+            <td id="houseResult" class="result-item" onclick="toggleKeywords('houseKeywords')">未抽取</td>
+            <td><button onclick="randomHouse()">点击抽取</button></td>
+        </tr>
+        <tr>
+            <td>随机行星</td>
+            <td id="planetResult" class="result-item" onclick="toggleKeywords('planetKeywords')">未抽取</td>
+            <td><button onclick="randomPlanet()">点击抽取</button></td>
+        </tr>
+        <tr>
+            <td colspan="3"><button onclick="resetAll()">重置所有结果</button></td>
+        </tr>
+    </table>
+
+    <!-- 关键词显示区域 -->
+    <div id="zodiacKeywords" class="keywords">星座关键词：暂无</div>
+    <div id="houseKeywords" class="keywords">宫位关键词：暂无</div>
+    <div id="planetKeywords" class="keywords">行星关键词：暂无</div>
+
+    <!-- 塔罗牌抽取区域（表格布局） -->
+    <div class="tarot-section">
+        <h3>塔罗牌随机抽取</h3>
+        <div class="tarot-controls">
+            <button onclick="drawTarot()">抽取塔罗牌</button>
+            <button onclick="resetTarot()">重置塔罗结果</button>
+        </div>
+        <table class="tarot-table" id="tarotTable">
+            <thead>
+                <tr>
+                    <th style="text-align: left; width: 30%;">塔罗牌结果</th>
+                    <th style="width: 70%;">关键词</th>
+                </tr>
+            </thead>
+            <tbody id="tarotTableBody">
+                <tr>
+                    <td class="tarot-card-cell" colspan="2">未抽取塔罗牌</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        // 原有占星数据及函数不变
+        const zodiacs = {
+            "白羊座": ["热情", "冲动", "勇敢", "直接", "领导力"],
+            "金牛座": ["稳重", "务实", "固执", "踏实", "享受"],
+            "双子座": ["灵活", "善辩", "好奇", "多变", "沟通力"],
+            "巨蟹座": ["温柔", "敏感", "顾家", "念旧", "共情"],
+            "狮子座": ["自信", "热情", "骄傲", "慷慨", "创造力"],
+            "处女座": ["细心", "严谨", "挑剔", "务实", "有条理"],
+            "天秤座": ["优雅", "公正", "犹豫", "社交", "平衡"],
+            "天蝎座": ["神秘", "执着", "深情", "果断", "洞察力"],
+            "射手座": ["自由", "乐观", "冒险", "坦率", "求知欲"],
+            "摩羯座": ["自律", "坚韧", "务实", "内敛", "目标感"],
+            "水瓶座": ["创新", "独立", "叛逆", "理性", "包容"],
+            "双鱼座": ["浪漫", "善良", "敏感", "梦幻", "想象力"]
+        };
+
+        const houses = {
+            "第一宫": ["自我", "外表", "性格", "开端", "行动力"],
+            "第二宫": ["财富", "资源", "价值观", "物质", "安全感"],
+            "第三宫": ["沟通", "学习", "兄弟", "短途", "思维"],
+            "第四宫": ["家庭", "根源", "房产", "内心", "晚年"],
+            "第五宫": ["爱情", "子女", "创造力", "娱乐", "表现欲"],
+            "第六宫": ["工作", "健康", "细节", "服务", "习惯"],
+            "第七宫": ["伴侣", "合作", "婚姻", "关系", "平衡"],
+            "第八宫": ["深度", "蜕变", "共享", "秘密", "重生"],
+            "第九宫": ["旅行", "教育", "哲学", "信念", "远方"],
+            "第十宫": ["事业", "声誉", "成就", "社会地位", "责任"],
+            "第十一宫": ["朋友", "团体", "理想", "未来", "人脉"],
+            "第十二宫": ["潜意识", "隐秘", "灵性", "牺牲", "内在"]
+        };
+
+        const planets = {
+            "太阳": ["核心", "自我", "生命力", "意志", "身份"],
+            "月亮": ["情绪", "内在", "安全感", "直觉", "习惯"],
+            "水星": ["思维", "沟通", "学习", "逻辑", "表达"],
+            "金星": ["爱情", "美感", "和谐", "社交", "价值观"],
+            "火星": ["行动", "冲动", "勇气", "竞争", "欲望"],
+            "木星": ["幸运", "扩张", "乐观", "成长", "机遇"],
+            "土星": ["责任", "限制", "自律", "成熟", "考验"],
+            "天王星": ["创新", "叛逆", "突变", "独立", "自由"],
+            "海王星": ["梦幻", "灵性", "包容", "模糊", "灵感"],
+            "冥王星": ["蜕变", "力量", "掌控", "重生", "深度"],
+            "南交点": ["过去", "习性", "舒适区", "业力", "惯性"],
+            "北交点": ["未来", "成长", "挑战", "方向", "使命"]
+        };
+
+        function randomZodiac() {
+            const keys = Object.keys(zodiacs);
+            const randomKey = keys[Math.floor(Math.random() * keys.length)];
+            document.getElementById("zodiacResult").textContent = randomKey;
+            document.getElementById("zodiacKeywords").textContent = `星座关键词：${zodiacs[randomKey].join("、")}`;
+        }
+
+        function randomHouse() {
+            const keys = Object.keys(houses);
+            const randomKey = keys[Math.floor(Math.random() * keys.length)];
+            document.getElementById("houseResult").textContent = randomKey;
+            document.getElementById("houseKeywords").textContent = `宫位关键词：${houses[randomKey].join("、")}`;
+        }
+
+        function randomPlanet() {
+            const keys = Object.keys(planets);
+            const randomKey = keys[Math.floor(Math.random() * keys.length)];
+            document.getElementById("planetResult").textContent = randomKey;
+            document.getElementById("planetKeywords").textContent = `行星关键词：${planets[randomKey].join("、")}`;
+        }
+
+        function toggleKeywords(id) {
+            const elem = document.getElementById(id);
+            elem.style.display = elem.style.display === "block" ? "none" : "block";
+        }
+
+        function resetAll() {
+            document.getElementById("zodiacResult").textContent = "未抽取";
+            document.getElementById("houseResult").textContent = "未抽取";
+            document.getElementById("planetResult").textContent = "未抽取";
+            const keywords = document.getElementsByClassName("keywords");
+            for (let i = 0; i < keywords.length; i++) {
+                keywords[i].style.display = "none";
+                keywords[i].textContent = keywords[i].textContent.split("：")[0] + "：暂无";
+            }
+        }
+
+        // 塔罗牌数据（正逆位各7个关键词）
+        const tarotData = {
+            "魔术师": {
+                "正": ["创造力", "行动力", "资源整合", "自信", "沟通力", "新开始", "掌控力"],
+                "逆": ["冲动", "能力不足", "资源浪费", "沟通障碍", "犹豫不决", "错失良机", "傲慢"]
+            },
+            "女祭司": {
+                "正": ["直觉", "智慧", "神秘", "内省", "洞察力", "冷静", "精神力量"],
+                "逆": ["多疑", "隐瞒", "直觉失灵", "情绪化", "缺乏主见", "信息闭塞", "固执"]
+            },
+            "女皇": {
+                "正": ["丰收", "创造力", "滋养", "舒适", "财富", "女性力量", "幸福感"],
+                "逆": ["奢侈", "懒惰", "创造力枯竭", "缺乏安全感", "依赖", "物质主义", "失衡"]
+            },
+            "皇帝": {
+                "正": ["权威", "自律", "领导力", "结构", "责任感", "稳定", "决策力"],
+                "逆": ["独裁", "固执", "缺乏弹性", "责任逃避", "权威失效", "控制欲强", "僵化"]
+            },
+            "教皇": {
+                "正": ["传统", "信仰", "指导", "社群", "道德", "知识传承", "归属感"],
+                "逆": ["教条", "迷信", "权威质疑", "独立思考", "脱离群众", "虚伪", "盲目跟随"]
+            },
+            "恋人": {
+                "正": ["选择", "爱情", "合作", "和谐", "吸引力", "承诺", "双向奔赴"],
+                "逆": ["抉择困难", "感情破裂", "背叛", "不和谐", "单方面付出", "诱惑", "缺乏承诺"]
+            },
+            "战车": {
+                "正": ["胜利", "勇气", "决心", "掌控力", "克服障碍", "目标明确", "行动力"],
+                "逆": ["失败", "缺乏勇气", "方向迷茫", "情绪失控", "障碍重重", "半途而废", "冲突"]
+            },
+            "力量": {
+                "正": ["勇气", "耐心", "包容", "内在力量", "克服恐惧", "温柔坚定", "自信"],
+                "逆": ["懦弱", "冲动", "缺乏耐心", "恐惧", "控制欲", "自卑", "情绪爆发"]
+            },
+            "隐士": {
+                "正": ["内省", "智慧", "孤独", "沉淀", "自我探索", "远见", "专注"],
+                "逆": ["孤僻", "逃避", "自我封闭", "缺乏方向", "固执己见", "脱离现实", "孤独感"]
+            },
+            "命运之轮": {
+                "正": ["机遇", "变化", "命运", "循环", "好运", "顺势而为", "转折点"],
+                "逆": ["厄运", "抗拒变化", "错失机遇", "恶性循环", "意外变故", "失控", "固执"]
+            },
+            "正义": {
+                "正": ["公正", "平衡", "责任", "法律", "因果", "公平竞争", "理性判断"],
+                "逆": ["不公", "偏见", "逃避责任", "法律纠纷", "失衡", "情绪化判断", "偏袒"]
+            },
+            "倒吊人": {
+                "正": ["牺牲", "换位思考", "等待", "灵性成长", "突破", "耐心", "新视角"],
+                "逆": ["牺牲不值得", "固执", "缺乏耐心", "自我中心", "逃避现实", "浪费时间", "消极"]
+            },
+            "死神": {
+                "正": ["蜕变", "结束", "重生", "转型", "放下", "新开始", "彻底改变"],
+                "逆": ["抗拒改变", "恐惧死亡", "停滞不前", "怀旧", "无法放下", "重复过去", "蜕变失败"]
+            },
+            "节制": {
+                "正": ["平衡", "调和", "耐心", "沟通", "适度", "成长", "和谐共处"],
+                "逆": ["失衡", "极端", "缺乏耐心", "沟通障碍", "过度放纵", "冲突", "成长受阻"]
+            },
+            "魔鬼": {
+                "正": ["诱惑", "欲望", "束缚", "沉迷", "物质主义", "控制", "阴影面"],
+                "逆": ["摆脱束缚", "克服诱惑", "觉醒", "打破常规", "自我救赎", "正视阴影", "自由"]
+            },
+            "塔": {
+                "正": ["突变", "摧毁", "危机", "觉醒", "重建", "真相大白", "彻底改变"],
+                "逆": ["抗拒改变", "危机潜伏", "重建失败", "固执", "自我欺骗", "缓慢崩溃", "侥幸心理"]
+            },
+            "星星": {
+                "正": ["希望", "灵感", "灵性", "未来", "乐观", "梦想", "疗愈"],
+                "逆": ["绝望", "缺乏灵感", "迷茫", "悲观", "梦想破碎", "疗愈失败", "失去方向"]
+            },
+            "月亮": {
+                "正": ["直觉", "梦境", "潜意识", "情绪", "神秘", "洞察力", "想象力"],
+                "逆": ["恐惧", "焦虑", "情绪失控", "噩梦", "直觉失灵", "隐瞒", "缺乏安全感"]
+            },
+            "太阳": {
+                "正": ["快乐", "成功", "活力", "自信", "光明", "温暖", "成就感"],
+                "逆": ["悲伤", "失败", "缺乏活力", "自卑", "黑暗", "挫折", "情绪低落"]
+            },
+            "审判": {
+                "正": ["重生", "觉醒", "审判", "救赎", "责任", "新机会", "自我反思"],
+                "逆": ["逃避责任", "执迷不悟", "拒绝改变", "审判不公", "错失救赎", "自我否定", "固执"]
+            },
+            "世界": {
+                "正": ["圆满", "成功", "完成", "和谐", "全球视野", "成就感", "新开始"],
+                "逆": ["不圆满", "失败", "未完成", "失衡", "视野狭隘", "成就感缺失", "停滞不前"]
+            },
+            "愚者": {
+                "正": ["自由", "冒险", "天真", "新开始", "勇气", "乐观", "无拘无束"],
+                "逆": ["鲁莽", "天真幼稚", "逃避责任", "盲目冒险", "乐观过度", "缺乏规划", "失控"]
+            }
+        };
+
+        // 存储已抽取的塔罗牌信息
+        let drawnTarots = [];
+        const tarotTableBody = document.getElementById("tarotTableBody");
+
+        // 抽取塔罗牌（新增一行表格，支持关键词独立展开）
+        function drawTarot() {
+            // 随机选牌和正逆位
+            const cardNames = Object.keys(tarotData);
+            const randomCardName = cardNames[Math.floor(Math.random() * cardNames.length)];
+            const position = Math.random() > 0.5 ? "正" : "逆";
+            const cardId = `tarot-${drawnTarots.length}`; // 唯一ID用于关联关键词
+
+            // 存储牌信息
+            drawnTarots.push({
+                id: cardId,
+                name: randomCardName,
+                position: position,
+                keywords: tarotData[randomCardName][position]
+            });
+
+            // 更新表格显示
+            if (drawnTarots.length === 1) {
+                tarotTableBody.innerHTML = ""; // 清除初始提示
+            }
+
+            // 新增一行：左列是牌名（可点击），右列是关键词（默认隐藏）
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td class="tarot-card-cell" id="${cardId}-card" onclick="toggleTarotKeywords('${cardId}')">
+                    ${randomCardName}[${position}]
+                </td>
+                <td class="tarot-keywords-cell" id="${cardId}-keywords">
+                    ${tarotData[randomCardName][position].join("、")}
+                </td>
+            `;
+            tarotTableBody.appendChild(row);
+        }
+
+        // 展开/隐藏单张塔罗牌的关键词
+        function toggleTarotKeywords(cardId) {
+            const keywordsCell = document.getElementById(`${cardId}-keywords`);
+            keywordsCell.style.display = keywordsCell.style.display === "table-cell" ? "none" : "table-cell";
+        }
+
+        // 重置塔罗结果
+        function resetTarot() {
+            drawnTarots = [];
+            tarotTableBody.innerHTML = `
+                <tr>
+                    <td class="tarot-card-cell" colspan="2">未抽取塔罗牌</td>
+                </tr>
+            `;
+        }
+    </script>
+</body>
+</html>
